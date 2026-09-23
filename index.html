@@ -72,6 +72,32 @@ function fmtTs(ts) {
   return d.toLocaleString();
 }
 
+// Keys must match the `key` values in letter.html's PROMPTS array, so answers show with readable questions.
+const REFLECTION_LABELS = {
+  like: "What do you like about me?",
+  memory: "What is your favorite memory about us?",
+  learned: "What's one thing you learned about our relationship?",
+  wish: "What's one wish you have that you never told me?",
+  alwaysWantedTogether: "What is something you always wanted us to do together?",
+  missMost: "What do you miss most about our relationship?",
+  favoriteMemoryOfUs: "What is your favorite memory of us?",
+  relive: "If we could relive one moment together, which one would you choose?",
+  valuedMost: "What did you value most about our relationship?",
+  makesHappy: "What is something you think always makes me happy?",
+  annoys: "What is something you know really annoys me?",
+  passionate: "What do you think I'm most passionate about?",
+  talkForHours: "What is something you think I could talk about for hours?",
+  improving: "What is something you think I'm trying to improve about myself?",
+  spend1000: "If I suddenly got $1,000, what do you think I would spend it on first?",
+  travelAnywhere: "If I could travel anywhere right now, where do you think I would go?",
+  gameForHours: "What game do you think I could play for hours without getting bored?",
+  lateNightMeal: "What do you think I'd choose for a late-night meal?",
+  famousFirst: "If I suddenly became famous, what do you think I'd do first?",
+  wishDifferently: "What do you think I wish I had done differently between us?",
+  understandFeelings: "What is something you think I want you to understand about how I feel?"
+};
+const REFLECTION_META_KEYS = new Set(["timeSpentMs", "completedAt"]);
+
 function LoginScreen({ onLoggedIn }) {
   const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [err, setErr] = useState("");
   const submit = async (e) => {
@@ -125,10 +151,13 @@ function SessionCard({ s }) {
           {s.reflections && (
             <div>
               <p className="text-[#FF85A1] font-semibold mb-1">Reflections ({fmtMs(s.reflections.timeSpentMs)})</p>
-              <p><b>Likes:</b> {s.reflections.like}</p>
-              <p><b>Favorite memory:</b> {s.reflections.memory}</p>
-              <p><b>Learned:</b> {s.reflections.learned}</p>
-              <p><b>Wish:</b> {s.reflections.wish}</p>
+              <div className="space-y-2">
+                {Object.entries(s.reflections)
+                  .filter(([k]) => !REFLECTION_META_KEYS.has(k))
+                  .map(([k, v]) => (
+                    <p key={k}><b>{REFLECTION_LABELS[k] || k}:</b> {String(v)}</p>
+                  ))}
+              </div>
             </div>
           )}
           {s.finalQuestions && (
