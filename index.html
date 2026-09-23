@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Letter Responses — Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { background:#0D070B; margin:0; font-family: -apple-system, "Plus Jakarta Sans", sans-serif; color:#FFF2F5; }
+  .card { background: linear-gradient(160deg, rgba(26,16,23,.92), rgba(13,7,11,.85)); border:1px solid #381E2B; border-radius:1rem; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import {
+    getFirestore, collection, onSnapshot, query, orderBy
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  // Same config as letter.html — must point at the same Firebase project.
+  const firebaseConfig = {
+    apiKey: "AIzaSyASx65vcnHFbI1Xn_LiX2g1HsWHzr5VGxE",
+    authDomain: "dash-ba3b9.firebaseapp.com",
+    projectId: "dash-ba3b9",
+    storageBucket: "dash-ba3b9.firebasestorage.app",
+    messagingSenderId: "1095249845311",
+    appId: "1:1095249845311:web:ec979faba78251a75c2c8a"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  window.__dash = {
+    login: (email, pw) => signInWithEmailAndPassword(auth, email, pw),
+    logout: () => signOut(auth),
+    onAuth: (cb) => onAuthStateChanged(auth, cb),
+    subscribe: (cb) => {
+      const q = query(collection(db, "letter_sessions"), orderBy("lastUpdatedAt", "desc"));
+      return onSnapshot(q, (snap) => {
+        const rows = [];
+        snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+        cb(rows);
+      });
+    }
+  };
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+function fmtMs(ms) {
+  if (!ms && ms !== 0) return "—";
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60), rem = s % 60;
+  return `${m}m ${rem}s`;
+}
+function fmtTs(ts) {
+  if (!ts) return "—";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleString();
+}
+
+function LoginScreen({ onLoggedIn }) {
+  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [err, setErr] = useState("");
+  const submit = async (e) => {
+    e.preventDefault(); setErr("");
+    try { await window.__dash.login(email, pw); }
+    catch (e) { setErr("Login failed — check email/password."); }
+  };
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <form onSubmit={submit} className="card p-8 w-full max-w-sm">
+        <h1 className="text-xl font-semibold mb-6">Sign in</h1>
+        <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email"
+          className="w-full mb-3 px-4 py-2.5 rounded-lg bg-black/40 border border-[#381E2B] outline-none focus:border-[#E62E5C]" />
+        <input value={pw} onChange={e => setPw(e.target.value)} type="password" placeholder="Password"
+          className="w-full mb-4 px-4 py-2.5 rounded-lg bg-black/40 border border-[#381E2B] outline-none focus:border-[#E62E5C]" />
+        {err && <p className="text-sm text-[#E62E5C] mb-3">{err}</p>}
+        <button className="w-full py-2.5 rounded-lg bg-[#E62E5C] font-semibold hover:opacity-90">Sign in</button>
+      </form>
+    </div>
+  );
+}
+
+function SessionCard({ s }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between cursor-pointer" onClick={() => setOpen(o => !o)}>
+        <div>
+          <p className="text-sm text-[#9E828E]">{fmtTs(s.startedAt)}</p>
+          <p className="font-medium">Status: <span className="text-[#FF85A1]">{s.status || "unknown"}</span></p>
+        </div>
+        <div className="text-right text-sm text-[#9E828E]">
+          {s.quiz && <p>Quiz: {s.quiz.score}/{s.quiz.total}</p>}
+          {s.totalTimeMs != null && <p>Total time: {fmtMs(s.totalTimeMs)}</p>}
+        </div>
+      </div>
+      {open && (
+        <div className="mt-4 pt-4 border-t border-[#381E2B] space-y-4 text-sm">
+          {s.quiz && (
+            <div>
+              <p className="text-[#FF85A1] font-semibold mb-1">Trivia — {s.quiz.score}/{s.quiz.total} ({fmtMs(s.quiz.timeSpentMs)})</p>
+              <ul className="space-y-1">
+                {(s.quiz.answers || []).map((a, i) => (
+                  <li key={i} className={a.correct ? "text-[#9E828E]" : "text-[#FFF2F5]"}>
+                    {a.correct ? "✓" : "✗"} {a.question} → {a.selected}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {s.reflections && (
+            <div>
+              <p className="text-[#FF85A1] font-semibold mb-1">Reflections ({fmtMs(s.reflections.timeSpentMs)})</p>
+              <p><b>Likes:</b> {s.reflections.like}</p>
+              <p><b>Favorite memory:</b> {s.reflections.memory}</p>
+              <p><b>Learned:</b> {s.reflections.learned}</p>
+              <p><b>Wish:</b> {s.reflections.wish}</p>
+            </div>
+          )}
+          {s.finalQuestions && (
+            <div>
+              <p className="text-[#FF85A1] font-semibold mb-1">Final questions ({fmtMs(s.finalQuestions.timeSpentMs)})</p>
+              <p>Restart from zero: {s.finalQuestions.restart}</p>
+              <p>Misses relationship: {s.finalQuestions.miss}</p>
+              <p>Still loves: {s.finalQuestions.love}</p>
+              <p>Still wants: {s.finalQuestions.want}</p>
+            </div>
+          )}
+          {s.passcode && (
+            <div>
+              <p className="text-[#FF85A1] font-semibold mb-1">Vault</p>
+              <p>Attempts: {s.passcode.attempts} — Unlocked: {fmtTs(s.passcode.unlockedAt)}</p>
+            </div>
+          )}
+          <p className="text-[#5a4750]">Letter viewed: {fmtTs(s.letterViewedAt)}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Dashboard({ user }) {
+  const [sessions, setSessions] = useState([]);
+  useEffect(() => {
+    const unsub = window.__dash.subscribe(setSessions);
+    return unsub;
+  }, []);
+  return (
+    <div className="min-h-screen px-4 py-8 max-w-3xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">Responses</h1>
+        <button onClick={() => window.__dash.logout()} className="text-sm text-[#9E828E] hover:text-[#FFF2F5]">Sign out</button>
+      </div>
+      {sessions.length === 0 && <p className="text-[#9E828E]">No responses yet.</p>}
+      <div className="space-y-4">
+        {sessions.map(s => <SessionCard key={s.id} s={s} />)}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [user, setUser] = useState(undefined); // undefined = loading, null = logged out
+  useEffect(() => window.__dash.onAuth(setUser), []);
+  if (user === undefined) return <div className="min-h-screen flex items-center justify-center text-[#9E828E]">Loading…</div>;
+  if (!user) return <LoginScreen />;
+  return <Dashboard user={user} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
