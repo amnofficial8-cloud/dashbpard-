@@ -67,10 +67,10 @@
     line-height: 1.5;
   }
 
-  .orb-wrap {
+  .face-wrap {
     position: relative;
-    width: 220px;
-    height: 220px;
+    width: 240px;
+    height: 240px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -85,67 +85,105 @@
     opacity: 0;
   }
 
-  .orb-wrap.listening .ring,
-  .orb-wrap.speaking .ring {
+  .face-wrap.active .ring {
     animation: pulse-ring 1.8s ease-out infinite;
   }
 
   @keyframes pulse-ring {
-    0%   { transform: scale(0.7); opacity: 0.6; }
-    100% { transform: scale(1.35); opacity: 0; }
+    0%   { transform: scale(0.72); opacity: 0.6; }
+    100% { transform: scale(1.3); opacity: 0; }
   }
 
-  .orb {
-    width: 148px;
-    height: 148px;
+  .face {
+    width: 168px;
+    height: 168px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #1c1c1c, #060606 70%);
-    border: 1.5px solid #2a2a2a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: radial-gradient(circle at 32% 28%, #1a1a1a, #050505 72%);
+    border: 1.5px solid #262626;
     cursor: pointer;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.15s ease;
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
   }
 
-  .orb:active { transform: scale(0.97); }
+  .face:active { transform: scale(0.98); }
 
-  .orb-wrap.connecting .orb {
+  .face-wrap.connecting .face {
     border-color: var(--text-dim);
-    animation: spin-fade 1.2s ease-in-out infinite;
+    animation: idle-pulse 1.3s ease-in-out infinite;
   }
 
-  .orb-wrap.listening .orb {
+  .face-wrap.active .face {
     border-color: var(--pink);
-    box-shadow: 0 0 32px var(--pink-dim);
+    box-shadow: 0 0 40px var(--pink-dim);
   }
 
-  .orb-wrap.speaking .orb {
-    border-color: var(--pink);
-    box-shadow: 0 0 48px var(--pink-dim);
-    animation: breathe 1.1s ease-in-out infinite;
-  }
-
-  @keyframes breathe {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-
-  @keyframes spin-fade {
-    0%, 100% { opacity: 0.5; }
+  @keyframes idle-pulse {
+    0%, 100% { opacity: 0.55; }
     50% { opacity: 1; }
   }
 
-  .mic-icon {
-    width: 40px;
-    height: 40px;
-    stroke: var(--text);
-    transition: stroke 0.3s ease;
+  /* Eyes */
+  .eyes {
+    display: flex;
+    gap: 30px;
   }
-  .orb-wrap.listening .mic-icon,
-  .orb-wrap.speaking .mic-icon { stroke: var(--pink); }
+
+  .eye {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.4s ease;
+    animation: blink 5.5s ease-in-out infinite;
+  }
+  .eye:nth-child(2) { animation-delay: 0.15s; }
+
+  .face-wrap.active .eye {
+    background: var(--pink);
+  }
+
+  @keyframes blink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    96% { transform: scaleY(0.1); }
+  }
+
+  /* Mouth: 5-bar talking indicator, reads as a calm equalizer/mouth */
+  .mouth {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+  }
+
+  .mouth-bar {
+    width: 4px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--text-dim);
+    transition: background 0.4s ease, height 0.15s ease;
+  }
+
+  .face-wrap.active .mouth-bar {
+    background: var(--pink);
+    animation: talk 0.85s ease-in-out infinite;
+  }
+
+  .mouth-bar:nth-child(1) { animation-delay: 0s; }
+  .mouth-bar:nth-child(2) { animation-delay: 0.12s; }
+  .mouth-bar:nth-child(3) { animation-delay: 0.24s; }
+  .mouth-bar:nth-child(4) { animation-delay: 0.12s; }
+  .mouth-bar:nth-child(5) { animation-delay: 0s; }
+
+  @keyframes talk {
+    0%, 100% { height: 4px; }
+    50% { height: 20px; }
+  }
 
   .status {
     margin-top: 28px;
@@ -173,17 +211,22 @@
   <div class="brand">VXN <span>VOICE</span></div>
 
   <h1 class="title">Talk to it.</h1>
-  <p class="subtitle">Tap the mic, start talking. It listens, thinks, and answers back — no typing.</p>
+  <p class="subtitle">Tap to start talking. It listens, thinks, and answers back — no typing.</p>
 
-  <div class="orb-wrap" id="orbWrap">
+  <div class="face-wrap" id="faceWrap">
     <div class="ring"></div>
-    <div class="orb" id="orb">
-      <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-        <line x1="12" y1="19" x2="12" y2="23"></line>
-        <line x1="8" y1="23" x2="16" y2="23"></line>
-      </svg>
+    <div class="face" id="face">
+      <div class="eyes">
+        <div class="eye"></div>
+        <div class="eye"></div>
+      </div>
+      <div class="mouth">
+        <div class="mouth-bar"></div>
+        <div class="mouth-bar"></div>
+        <div class="mouth-bar"></div>
+        <div class="mouth-bar"></div>
+        <div class="mouth-bar"></div>
+      </div>
     </div>
   </div>
 
@@ -260,7 +303,7 @@
     });
 
     // ---- UI wiring ----
-    const orbWrap = document.getElementById("orbWrap");
+    const faceWrap = document.getElementById("faceWrap");
     const statusEl = document.getElementById("status");
 
     let session = null;
@@ -268,7 +311,7 @@
     let isActive = false;
 
     function setState(state, message) {
-      orbWrap.className = "orb-wrap" + (state ? " " + state : "");
+      faceWrap.className = "face-wrap" + (state ? " " + state : "");
       statusEl.textContent = message;
       statusEl.classList.toggle("error", state === "error");
     }
@@ -279,7 +322,7 @@
         session = await liveModel.connect();
         audioController = await startAudioConversation(session);
         isActive = true;
-        setState("listening", "Listening — tap to stop");
+        setState("active", "Listening & talking — tap to stop");
       } catch (err) {
         console.error(err);
         isActive = false;
@@ -300,7 +343,7 @@
       setState("", "Tap to start");
     }
 
-    document.getElementById("orb").addEventListener("click", () => {
+    document.getElementById("face").addEventListener("click", () => {
       if (isActive) {
         stopConversation();
       } else {
