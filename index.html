@@ -288,10 +288,14 @@
 
     const firebaseApp = initializeApp(firebaseConfig);
 
-    initializeAppCheck(firebaseApp, {
-      provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
-      isTokenAutoRefreshEnabled: true
-    });
+    try {
+      initializeAppCheck(firebaseApp, {
+        provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+        isTokenAutoRefreshEnabled: true
+      });
+    } catch (err) {
+      console.warn("App Check init failed (continuing anyway):", err);
+    }
 
     const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
 
@@ -326,7 +330,8 @@
       } catch (err) {
         console.error(err);
         isActive = false;
-        setState("error", "Couldn't connect. Check your Firebase setup and mic permissions.");
+        const detail = (err && err.message) ? err.message : "Unknown error";
+        setState("error", "Couldn't connect: " + detail);
       }
     }
 
