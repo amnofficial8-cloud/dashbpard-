@@ -1,216 +1,313 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Letter Responses — Dashboard</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VXN Voice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: dark; }
-  body { background:#0D070B; margin:0; font-family: -apple-system, "Plus Jakarta Sans", sans-serif; color:#FFF2F5; }
-  .card { background: linear-gradient(160deg, rgba(26,16,23,.92), rgba(13,7,11,.85)); border:1px solid #381E2B; border-radius:1rem; }
+  :root {
+    --bg: #0a0a0a;
+    --pink: #f4a7b9;
+    --pink-dim: rgba(244, 167, 185, 0.35);
+    --text: #f2f2f2;
+    --text-dim: #8a8a8a;
+    --danger: #ff6b6b;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 24px;
+    position: relative;
+  }
+
+  .brand {
+    position: absolute;
+    top: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .brand span { color: var(--pink); }
+
+  .title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(40px, 8vw, 72px);
+    letter-spacing: 0.02em;
+    margin: 0 0 8px;
+    text-align: center;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 15px;
+    margin-bottom: 56px;
+    text-align: center;
+    max-width: 420px;
+    line-height: 1.5;
+  }
+
+  .orb-wrap {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid var(--pink-dim);
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+
+  .orb-wrap.listening .ring,
+  .orb-wrap.speaking .ring {
+    animation: pulse-ring 1.8s ease-out infinite;
+  }
+
+  @keyframes pulse-ring {
+    0%   { transform: scale(0.7); opacity: 0.6; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+
+  .orb {
+    width: 148px;
+    height: 148px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #1c1c1c, #060606 70%);
+    border: 1.5px solid #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.15s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .orb:active { transform: scale(0.97); }
+
+  .orb-wrap.connecting .orb {
+    border-color: var(--text-dim);
+    animation: spin-fade 1.2s ease-in-out infinite;
+  }
+
+  .orb-wrap.listening .orb {
+    border-color: var(--pink);
+    box-shadow: 0 0 32px var(--pink-dim);
+  }
+
+  .orb-wrap.speaking .orb {
+    border-color: var(--pink);
+    box-shadow: 0 0 48px var(--pink-dim);
+    animation: breathe 1.1s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  @keyframes spin-fade {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .mic-icon {
+    width: 40px;
+    height: 40px;
+    stroke: var(--text);
+    transition: stroke 0.3s ease;
+  }
+  .orb-wrap.listening .mic-icon,
+  .orb-wrap.speaking .mic-icon { stroke: var(--pink); }
+
+  .status {
+    margin-top: 28px;
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    min-height: 20px;
+    text-align: center;
+  }
+
+  .status.error { color: var(--danger); }
+
+  .hint {
+    position: absolute;
+    bottom: 28px;
+    font-size: 12px;
+    color: #4a4a4a;
+    text-align: center;
+    max-width: 320px;
+  }
 </style>
 </head>
 <body>
-<div id="root"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <div class="brand">VXN <span>VOICE</span></div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import {
-    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
-  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
-  import {
-    getFirestore, collection, onSnapshot, query, orderBy
-  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  <h1 class="title">Talk to it.</h1>
+  <p class="subtitle">Tap the mic, start talking. It listens, thinks, and answers back — no typing.</p>
 
-  // Same config as letter.html — must point at the same Firebase project.
-  const firebaseConfig = {
-    apiKey: "AIzaSyASx65vcnHFbI1Xn_LiX2g1HsWHzr5VGxE",
-    authDomain: "dash-ba3b9.firebaseapp.com",
-    projectId: "dash-ba3b9",
-    storageBucket: "dash-ba3b9.firebasestorage.app",
-    messagingSenderId: "1095249845311",
-    appId: "1:1095249845311:web:ec979faba78251a75c2c8a"
-  };
+  <div class="orb-wrap" id="orbWrap">
+    <div class="ring"></div>
+    <div class="orb" id="orb">
+      <svg class="mic-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+    </div>
+  </div>
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+  <div class="status" id="status">Tap to start</div>
 
-  window.__dash = {
-    login: (email, pw) => signInWithEmailAndPassword(auth, email, pw),
-    logout: () => signOut(auth),
-    onAuth: (cb) => onAuthStateChanged(auth, cb),
-    subscribe: (cb) => {
-      const q = query(collection(db, "letter_sessions"), orderBy("lastUpdatedAt", "desc"));
-      return onSnapshot(q, (snap) => {
-        const rows = [];
-        snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
-        cb(rows);
-      });
+  <div class="hint">Needs mic access. Works best in Chrome or Edge. Preview API — expect occasional hiccups.</div>
+
+  <script type="module">
+    // ============================================================
+    // VXN VOICE — conversational voice assistant
+    // Built on Firebase AI Logic (Gemini Live API)
+    //
+    // SETUP — do this before it will work:
+    // 1. In the Firebase console for your project, go to
+    //    AI Services > AI Logic > Get started, choose the
+    //    "Gemini Developer API" provider (free tier).
+    // 2. That flow will also set up Firebase App Check, which
+    //    Firebase now requires for AI Logic. For local/testing
+    //    use, register the App Check "debug provider" token
+    //    (see console: Security > App Check > Apps tab).
+    //    For the live vxnoffice-hosted version, register a
+    //    production reCAPTCHA v3 site key instead — see
+    //    https://firebase.google.com/docs/ai-logic/app-check
+    // 3. Paste your Firebase config below.
+    // 4. Paste your reCAPTCHA v3 site key below (production)
+    //    OR leave DEBUG_MODE = true while testing.
+    // ============================================================
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+    import {
+      initializeAppCheck,
+      ReCaptchaV3Provider
+    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js";
+    import {
+      getAI,
+      getLiveGenerativeModel,
+      GoogleAIBackend,
+      ResponseModality,
+      startAudioConversation
+    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-ai.js";
+
+    // TODO(VXN): replace with your Firebase project config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Set to true while developing locally / before you have a
+    // production reCAPTCHA key registered.
+    const DEBUG_MODE = true;
+    if (DEBUG_MODE) {
+      self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
     }
-  };
-</script>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect } = React;
+    const RECAPTCHA_SITE_KEY = "YOUR_RECAPTCHA_V3_SITE_KEY";
 
-function fmtMs(ms) {
-  if (!ms && ms !== 0) return "—";
-  const s = Math.round(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60), rem = s % 60;
-  return `${m}m ${rem}s`;
-}
-function fmtTs(ts) {
-  if (!ts) return "—";
-  const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleString();
-}
+    const firebaseApp = initializeApp(firebaseConfig);
 
-// Keys must match the `key` values in letter.html's PROMPTS array, so answers show with readable questions.
-const REFLECTION_LABELS = {
-  like: "What do you like about me?",
-  memory: "What is your favorite memory about us?",
-  learned: "What's one thing you learned about our relationship?",
-  wish: "What's one wish you have that you never told me?",
-  alwaysWantedTogether: "What is something you always wanted us to do together?",
-  missMost: "What do you miss most about our relationship?",
-  favoriteMemoryOfUs: "What is your favorite memory of us?",
-  relive: "If we could relive one moment together, which one would you choose?",
-  valuedMost: "What did you value most about our relationship?",
-  makesHappy: "What is something you think always makes me happy?",
-  annoys: "What is something you know really annoys me?",
-  passionate: "What do you think I'm most passionate about?",
-  talkForHours: "What is something you think I could talk about for hours?",
-  improving: "What is something you think I'm trying to improve about myself?",
-  spend1000: "If I suddenly got $1,000, what do you think I would spend it on first?",
-  travelAnywhere: "If I could travel anywhere right now, where do you think I would go?",
-  gameForHours: "What game do you think I could play for hours without getting bored?",
-  lateNightMeal: "What do you think I'd choose for a late-night meal?",
-  famousFirst: "If I suddenly became famous, what do you think I'd do first?",
-  wishDifferently: "What do you think I wish I had done differently between us?",
-  understandFeelings: "What is something you think I want you to understand about how I feel?"
-};
-const REFLECTION_META_KEYS = new Set(["timeSpentMs", "completedAt"]);
+    initializeAppCheck(firebaseApp, {
+      provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
 
-function LoginScreen({ onLoggedIn }) {
-  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [err, setErr] = useState("");
-  const submit = async (e) => {
-    e.preventDefault(); setErr("");
-    try { await window.__dash.login(email, pw); }
-    catch (e) { setErr("Login failed — check email/password."); }
-  };
-  return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <form onSubmit={submit} className="card p-8 w-full max-w-sm">
-        <h1 className="text-xl font-semibold mb-6">Sign in</h1>
-        <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="Email"
-          className="w-full mb-3 px-4 py-2.5 rounded-lg bg-black/40 border border-[#381E2B] outline-none focus:border-[#E62E5C]" />
-        <input value={pw} onChange={e => setPw(e.target.value)} type="password" placeholder="Password"
-          className="w-full mb-4 px-4 py-2.5 rounded-lg bg-black/40 border border-[#381E2B] outline-none focus:border-[#E62E5C]" />
-        {err && <p className="text-sm text-[#E62E5C] mb-3">{err}</p>}
-        <button className="w-full py-2.5 rounded-lg bg-[#E62E5C] font-semibold hover:opacity-90">Sign in</button>
-      </form>
-    </div>
-  );
-}
+    const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
 
-function SessionCard({ s }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="card p-5">
-      <div className="flex items-center justify-between cursor-pointer" onClick={() => setOpen(o => !o)}>
-        <div>
-          <p className="text-sm text-[#9E828E]">{fmtTs(s.startedAt)}</p>
-          <p className="font-medium">Status: <span className="text-[#FF85A1]">{s.status || "unknown"}</span></p>
-        </div>
-        <div className="text-right text-sm text-[#9E828E]">
-          {s.quiz && <p>Quiz: {s.quiz.score}/{s.quiz.total}</p>}
-          {s.totalTimeMs != null && <p>Total time: {fmtMs(s.totalTimeMs)}</p>}
-        </div>
-      </div>
-      {open && (
-        <div className="mt-4 pt-4 border-t border-[#381E2B] space-y-4 text-sm">
-          {s.quiz && (
-            <div>
-              <p className="text-[#FF85A1] font-semibold mb-1">Trivia — {s.quiz.score}/{s.quiz.total} ({fmtMs(s.quiz.timeSpentMs)})</p>
-              <ul className="space-y-1">
-                {(s.quiz.answers || []).map((a, i) => (
-                  <li key={i} className={a.correct ? "text-[#9E828E]" : "text-[#FFF2F5]"}>
-                    {a.correct ? "✓" : "✗"} {a.question} → {a.selected}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {s.reflections && (
-            <div>
-              <p className="text-[#FF85A1] font-semibold mb-1">Reflections ({fmtMs(s.reflections.timeSpentMs)})</p>
-              <div className="space-y-2">
-                {Object.entries(s.reflections)
-                  .filter(([k]) => !REFLECTION_META_KEYS.has(k))
-                  .map(([k, v]) => (
-                    <p key={k}><b>{REFLECTION_LABELS[k] || k}:</b> {String(v)}</p>
-                  ))}
-              </div>
-            </div>
-          )}
-          {s.finalQuestions && (
-            <div>
-              <p className="text-[#FF85A1] font-semibold mb-1">Final questions ({fmtMs(s.finalQuestions.timeSpentMs)})</p>
-              <p>Restart from zero: {s.finalQuestions.restart}</p>
-              <p>Misses relationship: {s.finalQuestions.miss}</p>
-              <p>Still loves: {s.finalQuestions.love}</p>
-              <p>Still wants: {s.finalQuestions.want}</p>
-            </div>
-          )}
-          {s.passcode && (
-            <div>
-              <p className="text-[#FF85A1] font-semibold mb-1">Vault</p>
-              <p>Attempts: {s.passcode.attempts} — Unlocked: {fmtTs(s.passcode.unlockedAt)}</p>
-            </div>
-          )}
-          <p className="text-[#5a4750]">Letter viewed: {fmtTs(s.letterViewedAt)}</p>
-        </div>
-      )}
-    </div>
-  );
-}
+    const liveModel = getLiveGenerativeModel(ai, {
+      model: "gemini-3.1-flash-live-preview",
+      generationConfig: {
+        responseModalities: [ResponseModality.AUDIO]
+      }
+    });
 
-function Dashboard({ user }) {
-  const [sessions, setSessions] = useState([]);
-  useEffect(() => {
-    const unsub = window.__dash.subscribe(setSessions);
-    return unsub;
-  }, []);
-  return (
-    <div className="min-h-screen px-4 py-8 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Responses</h1>
-        <button onClick={() => window.__dash.logout()} className="text-sm text-[#9E828E] hover:text-[#FFF2F5]">Sign out</button>
-      </div>
-      {sessions.length === 0 && <p className="text-[#9E828E]">No responses yet.</p>}
-      <div className="space-y-4">
-        {sessions.map(s => <SessionCard key={s.id} s={s} />)}
-      </div>
-    </div>
-  );
-}
+    // ---- UI wiring ----
+    const orbWrap = document.getElementById("orbWrap");
+    const statusEl = document.getElementById("status");
 
-function App() {
-  const [user, setUser] = useState(undefined); // undefined = loading, null = logged out
-  useEffect(() => window.__dash.onAuth(setUser), []);
-  if (user === undefined) return <div className="min-h-screen flex items-center justify-center text-[#9E828E]">Loading…</div>;
-  if (!user) return <LoginScreen />;
-  return <Dashboard user={user} />;
-}
+    let session = null;
+    let audioController = null;
+    let isActive = false;
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-</script>
+    function setState(state, message) {
+      orbWrap.className = "orb-wrap" + (state ? " " + state : "");
+      statusEl.textContent = message;
+      statusEl.classList.toggle("error", state === "error");
+    }
+
+    async function startConversation() {
+      try {
+        setState("connecting", "Connecting…");
+        session = await liveModel.connect();
+        audioController = await startAudioConversation(session);
+        isActive = true;
+        setState("listening", "Listening — tap to stop");
+      } catch (err) {
+        console.error(err);
+        isActive = false;
+        setState("error", "Couldn't connect. Check your Firebase setup and mic permissions.");
+      }
+    }
+
+    async function stopConversation() {
+      try {
+        if (audioController) await audioController.stop();
+        if (session) await session.close();
+      } catch (err) {
+        console.error(err);
+      }
+      session = null;
+      audioController = null;
+      isActive = false;
+      setState("", "Tap to start");
+    }
+
+    document.getElementById("orb").addEventListener("click", () => {
+      if (isActive) {
+        stopConversation();
+      } else {
+        startConversation();
+      }
+    });
+  </script>
 </body>
 </html>
