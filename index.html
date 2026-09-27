@@ -299,9 +299,19 @@
 
     // Set to true while developing locally / before you have a
     // production reCAPTCHA key registered.
+    //
+    // IMPORTANT: after the first page load, check the browser
+    // console for a line like:
+    //   "App Check debug token: 1234abcd-....-....-...."
+    // Copy that token, register it in Firebase console under
+    // Security > App Check > Apps > (this app) > Manage debug
+    // tokens, then paste the SAME token string below (replacing
+    // `true`). Leaving this as `true` generates a NEW random
+    // token every reload, which will never match what you
+    // registered and causes a 401 "App Check token is invalid".
     const DEBUG_MODE = true;
     if (DEBUG_MODE) {
-      self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+      self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; // <-- replace `true` with your registered token string once you have one
     }
 
     const RECAPTCHA_SITE_KEY = "YOUR_RECAPTCHA_V3_SITE_KEY";
