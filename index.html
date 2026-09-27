@@ -280,7 +280,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
     import {
       initializeAppCheck,
-      ReCaptchaV3Provider
+      ReCaptchaEnterpriseProvider
     } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js";
     import {
       getAI,
@@ -314,13 +314,16 @@
       self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; // <-- replace `true` with your registered token string once you have one
     }
 
-    const RECAPTCHA_SITE_KEY = "YOUR_RECAPTCHA_V3_SITE_KEY";
+    // Your reCAPTCHA Enterprise site key (from Google Cloud console
+    // reCAPTCHA admin — the score-based key type). Free up to
+    // 10,000 assessments/month, no billing account required.
+    const RECAPTCHA_SITE_KEY = "YOUR_RECAPTCHA_ENTERPRISE_SITE_KEY";
 
     const firebaseApp = initializeApp(firebaseConfig);
 
     try {
       initializeAppCheck(firebaseApp, {
-        provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
+        provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
         isTokenAutoRefreshEnabled: true
       });
     } catch (err) {
