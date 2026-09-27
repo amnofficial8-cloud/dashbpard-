@@ -61,11 +61,33 @@
   .subtitle {
     color: var(--text-dim);
     font-size: 15px;
-    margin-bottom: 56px;
+    margin-bottom: 40px;
     text-align: center;
     max-width: 420px;
     line-height: 1.5;
   }
+
+  .setup-banner {
+    background: #151515;
+    border: 1px solid #262626;
+    border-radius: 10px;
+    padding: 14px 18px;
+    max-width: 420px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 32px;
+    text-align: left;
+  }
+  .setup-banner strong { color: var(--pink); }
+  .setup-banner code {
+    background: #1f1f1f;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .setup-banner.hidden { display: none; }
 
   .face-wrap {
     position: relative;
@@ -128,7 +150,6 @@
     50% { opacity: 1; }
   }
 
-  /* Eyes */
   .eyes {
     display: flex;
     gap: 30px;
@@ -153,7 +174,6 @@
     96% { transform: scaleY(0.1); }
   }
 
-  /* Mouth: 5-bar talking indicator, reads as a calm equalizer/mouth */
   .mouth {
     display: flex;
     align-items: center;
@@ -192,6 +212,7 @@
     letter-spacing: 0.02em;
     min-height: 20px;
     text-align: center;
+    max-width: 400px;
   }
 
   .status.error { color: var(--danger); }
@@ -213,6 +234,15 @@
   <h1 class="title">Talk to it.</h1>
   <p class="subtitle">Tap to start talking. It listens, thinks, and answers back — no typing.</p>
 
+  <div class="setup-banner" id="setupBanner">
+    <strong>One-time setup:</strong> go to
+    <code>aistudio.google.com/apikey</code>, click "Create API key"
+    (it's free, no billing needed), then paste it into the
+    <code>GEMINI_API_KEY</code> line near the top of this file's
+    script. That's the only setup step — no Firebase, no App Check,
+    no reCAPTCHA.
+  </div>
+
   <div class="face-wrap" id="faceWrap">
     <div class="ring"></div>
     <div class="face" id="face">
@@ -232,115 +262,49 @@
 
   <div class="status" id="status">Tap to start</div>
 
-  <div class="hint">Needs mic access. Works best in Chrome or Edge. Free version — takes turns rather than true overlapping speech.</div>
+  <div class="hint">Needs mic access. Works best in Chrome or Edge.</div>
 
   <script type="module">
     // ============================================================
     // VXN VOICE — conversational voice assistant
-    // Built on Firebase AI Logic (Gemini Live API)
+    // Zero-backend version: no Firebase, no App Check, no reCAPTCHA.
     //
-    // SETUP — do this before it will work:
-    // 1. In the Firebase console for your project, go to
-    //    AI Services > AI Logic > Get started, choose the
-    //    "Gemini Developer API" provider (free tier).
-    // 2. That flow will also set up Firebase App Check, which
-    //    Firebase now requires for AI Logic. For local/testing
-    //    use, register the App Check "debug provider" token
-    //    (see console: Security > App Check > Apps tab).
-    //    For the live vxnoffice-hosted version, register a
-    //    production reCAPTCHA v3 site key instead — see
-    //    https://firebase.google.com/docs/ai-logic/app-check
-    // 3. Paste your Firebase config below.
-    // 4. Paste your reCAPTCHA v3 site key below (production)
-    //    OR leave DEBUG_MODE = true while testing.
+    // How it works:
+    //  - Browser SpeechRecognition listens to you (free)
+    //  - A direct call to the Gemini API "thinks" (free tier)
+    //  - Browser SpeechSynthesis speaks the reply back (free)
+    //
+    // SETUP (the only step):
+    // 1. Go to https://aistudio.google.com/apikey
+    // 2. Click "Create API key" — no billing account required
+    //    for the free tier.
+    // 3. Paste it below, replacing "YOUR_GEMINI_API_KEY".
+    //
+    // Note: this puts the API key in client-side code, which
+    // means anyone who views the page source could see and use
+    // it against your free quota. For a personal/team prototype
+    // that's a low-stakes trade-off (worst case: your free quota
+    // gets used up, no charges), but don't reuse this key for
+    // anything sensitive later — generate a fresh one if this
+    // page ever gets wide public traffic.
     // ============================================================
 
-    // ============================================================
-    // VXN VOICE — conversational voice assistant (FREE version)
-    //
-    // No paid Live API here — this uses:
-    //  - Browser SpeechRecognition (free, built into Chrome/Edge)
-    //  - Gemini "gemini-3.1-flash-lite" text model via Firebase AI
-    //    Logic — genuinely free as long as this Firebase project is
-    //    NOT linked to a Cloud Billing account
-    //  - Browser SpeechSynthesis (free) to read the reply aloud
-    //
-    // SETUP:
-    // 1. In the Firebase console, AI Services > AI Logic > Get
-    //    started > choose "Gemini Developer API" (NOT "Agent
-    //    Platform Gemini API" — that one always requires Blaze).
-    // 2. Don't link a Cloud Billing account if you want to stay
-    //    on the free tier.
-    // 3. Firebase config below is already filled in for
-    //    vxn-system-login-sign-up.
-    // 4. Works best in Chrome/Edge — Safari/Firefox support for
-    //    SpeechRecognition is limited or missing.
-    // ============================================================
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-    import {
-      initializeAppCheck,
-      ReCaptchaEnterpriseProvider
-    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js";
-    import {
-      getAI,
-      getGenerativeModel,
-      GoogleAIBackend
-    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-ai.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyDGl93GcR018GnTRtEdLom6J6soOBbeDi4",
-      authDomain: "vxn-system-login-sign-up.firebaseapp.com",
-      projectId: "vxn-system-login-sign-up",
-      storageBucket: "vxn-system-login-sign-up.firebasestorage.app",
-      messagingSenderId: "617703170039",
-      appId: "1:617703170039:web:6d74dfd1411bfb83e998f2"
-    };
-
-    // Set to true while developing locally / before you have a
-    // production reCAPTCHA key registered.
-    //
-    // IMPORTANT: after the first page load, check the browser
-    // console for a line like:
-    //   "App Check debug token: 1234abcd-....-....-...."
-    // Copy that token, register it in Firebase console under
-    // Security > App Check > Apps > (this app) > Manage debug
-    // tokens, then paste the SAME token string below (replacing
-    // `true`). Leaving this as `true` generates a NEW random
-    // token every reload, which will never match what you
-    // registered and causes a 401 "App Check token is invalid".
-    const DEBUG_MODE = true;
-    if (DEBUG_MODE) {
-      self.FIREBASE_APPCHECK_DEBUG_TOKEN = true; // <-- replace `true` with your registered token string once you have one
-    }
-
-    // Your reCAPTCHA Enterprise site key (from Google Cloud console
-    // reCAPTCHA admin — the score-based key type). Free up to
-    // 10,000 assessments/month, no billing account required.
-    const RECAPTCHA_SITE_KEY = "YOUR_RECAPTCHA_ENTERPRISE_SITE_KEY";
-
-    const firebaseApp = initializeApp(firebaseConfig);
-
-    try {
-      initializeAppCheck(firebaseApp, {
-        provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
-        isTokenAutoRefreshEnabled: true
-      });
-    } catch (err) {
-      console.warn("App Check init failed (continuing anyway):", err);
-    }
-
-    const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
-    const model = getGenerativeModel(ai, { model: "gemini-3.1-flash-lite" });
+    const GEMINI_API_KEY = "AQ.Ab8RN6KG1qywWrMvzYlXAgQJfGXVUyFMKQOIUWfWvgcpUHMrAQ";
+    const MODEL = "gemini-3.1-flash-lite";
 
     // ---- UI wiring ----
     const faceWrap = document.getElementById("faceWrap");
     const statusEl = document.getElementById("status");
+    const setupBanner = document.getElementById("setupBanner");
+
+    if (GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY") {
+      setupBanner.classList.add("hidden");
+    }
 
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
-    let isActive = false;      // conversation loop is running
-    let chatHistory = [];      // [{ role: 'user'|'model', parts: [{text}] }]
+    let isActive = false;
+    let chatHistory = []; // [{ role: 'user'|'model', parts: [{text}] }]
 
     function setState(state, message) {
       faceWrap.className = "face-wrap" + (state ? " " + state : "");
@@ -366,13 +330,7 @@
           setState("error", "Mic permission blocked — check browser settings.");
           return;
         }
-        // no-speech, aborted, etc. — just try listening again if still active
         if (isActive) listenOnce();
-      };
-
-      rec.onend = () => {
-        // If it ended without a result and we're still active, resume listening.
-        // (handleUserSpeech manages state changes for the success path.)
       };
 
       return rec;
@@ -380,7 +338,7 @@
 
     function listenOnce() {
       if (!isActive) return;
-      setState("listening", "Listening — go ahead");
+      setState("active", "Listening — go ahead");
       recognition = buildRecognition();
       try {
         recognition.start();
@@ -390,21 +348,31 @@
     }
 
     async function handleUserSpeech(transcript) {
-      setState("thinking", "Thinking…");
+      setState("connecting", "Thinking…");
       try {
         chatHistory.push({ role: "user", parts: [{ text: transcript }] });
 
-        const result = await model.generateContent({
-          contents: chatHistory
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: chatHistory })
         });
-        const replyText = result.response.text();
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => null);
+          const msg = errBody?.error?.message || `HTTP ${response.status}`;
+          throw new Error(msg);
+        }
+
+        const data = await response.json();
+        const replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Hmm, I didn't get a response.";
         chatHistory.push({ role: "model", parts: [{ text: replyText }] });
 
         speak(replyText);
       } catch (err) {
         console.error(err);
-        const detail = (err && err.message) ? err.message : "Unknown error";
-        setState("error", "Couldn't get a response: " + detail);
+        setState("error", "Couldn't get a response: " + err.message);
         isActive = false;
       }
     }
@@ -425,6 +393,10 @@
     function startConversation() {
       if (!SpeechRecognitionAPI) {
         setState("error", "Speech recognition isn't supported in this browser — try Chrome or Edge.");
+        return;
+      }
+      if (GEMINI_API_KEY === "YOUR_GEMINI_API_KEY") {
+        setState("error", "Add your Gemini API key first — see the box above.");
         return;
       }
       chatHistory = [];
