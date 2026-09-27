@@ -232,7 +232,7 @@
 
   <div class="status" id="status">Tap to start</div>
 
-  <div class="hint">Needs mic access. Works best in Chrome or Edge. Preview API — expect occasional hiccups.</div>
+  <div class="hint">Needs mic access. Works best in Chrome or Edge. Free version — takes turns rather than true overlapping speech.</div>
 
   <script type="module">
     // ============================================================
@@ -255,6 +255,28 @@
     //    OR leave DEBUG_MODE = true while testing.
     // ============================================================
 
+    // ============================================================
+    // VXN VOICE — conversational voice assistant (FREE version)
+    //
+    // No paid Live API here — this uses:
+    //  - Browser SpeechRecognition (free, built into Chrome/Edge)
+    //  - Gemini "gemini-3.1-flash-lite" text model via Firebase AI
+    //    Logic — genuinely free as long as this Firebase project is
+    //    NOT linked to a Cloud Billing account
+    //  - Browser SpeechSynthesis (free) to read the reply aloud
+    //
+    // SETUP:
+    // 1. In the Firebase console, AI Services > AI Logic > Get
+    //    started > choose "Gemini Developer API" (NOT "Agent
+    //    Platform Gemini API" — that one always requires Blaze).
+    // 2. Don't link a Cloud Billing account if you want to stay
+    //    on the free tier.
+    // 3. Firebase config below is already filled in for
+    //    vxn-system-login-sign-up.
+    // 4. Works best in Chrome/Edge — Safari/Firefox support for
+    //    SpeechRecognition is limited or missing.
+    // ============================================================
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
     import {
       initializeAppCheck,
@@ -262,10 +284,8 @@
     } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app-check.js";
     import {
       getAI,
-      getLiveGenerativeModel,
-      GoogleAIBackend,
-      ResponseModality,
-      startAudioConversation
+      getGenerativeModel,
+      GoogleAIBackend
     } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-ai.js";
 
     const firebaseConfig = {
@@ -298,21 +318,16 @@
     }
 
     const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
-
-    const liveModel = getLiveGenerativeModel(ai, {
-      model: "gemini-2.5-flash-native-audio-preview-12-2025",
-      generationConfig: {
-        responseModalities: [ResponseModality.AUDIO]
-      }
-    });
+    const model = getGenerativeModel(ai, { model: "gemini-3.1-flash-lite" });
 
     // ---- UI wiring ----
     const faceWrap = document.getElementById("faceWrap");
     const statusEl = document.getElementById("status");
 
-    let session = null;
-    let audioController = null;
-    let isActive = false;
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    let isActive = false;      // conversation loop is running
+    let chatHistory = [];      // [{ role: 'user'|'model', parts: [{text}] }]
 
     function setState(state, message) {
       faceWrap.className = "face-wrap" + (state ? " " + state : "");
@@ -320,31 +335,96 @@
       statusEl.classList.toggle("error", state === "error");
     }
 
-    async function startConversation() {
+    function buildRecognition() {
+      const rec = new SpeechRecognitionAPI();
+      rec.lang = "en-US";
+      rec.continuous = false;
+      rec.interimResults = false;
+
+      rec.onresult = async (event) => {
+        const transcript = event.results[0][0].transcript;
+        await handleUserSpeech(transcript);
+      };
+
+      rec.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          isActive = false;
+          setState("error", "Mic permission blocked — check browser settings.");
+          return;
+        }
+        // no-speech, aborted, etc. — just try listening again if still active
+        if (isActive) listenOnce();
+      };
+
+      rec.onend = () => {
+        // If it ended without a result and we're still active, resume listening.
+        // (handleUserSpeech manages state changes for the success path.)
+      };
+
+      return rec;
+    }
+
+    function listenOnce() {
+      if (!isActive) return;
+      setState("listening", "Listening — go ahead");
+      recognition = buildRecognition();
       try {
-        setState("connecting", "Connecting…");
-        session = await liveModel.connect();
-        audioController = await startAudioConversation(session);
-        isActive = true;
-        setState("active", "Listening & talking — tap to stop");
+        recognition.start();
       } catch (err) {
         console.error(err);
-        isActive = false;
-        const detail = (err && err.message) ? err.message : "Unknown error";
-        setState("error", "Couldn't connect: " + detail);
       }
     }
 
-    async function stopConversation() {
+    async function handleUserSpeech(transcript) {
+      setState("thinking", "Thinking…");
       try {
-        if (audioController) await audioController.stop();
-        if (session) await session.close();
+        chatHistory.push({ role: "user", parts: [{ text: transcript }] });
+
+        const result = await model.generateContent({
+          contents: chatHistory
+        });
+        const replyText = result.response.text();
+        chatHistory.push({ role: "model", parts: [{ text: replyText }] });
+
+        speak(replyText);
       } catch (err) {
         console.error(err);
+        const detail = (err && err.message) ? err.message : "Unknown error";
+        setState("error", "Couldn't get a response: " + detail);
+        isActive = false;
       }
-      session = null;
-      audioController = null;
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.onstart = () => setState("active", "Speaking…");
+      utterance.onend = () => {
+        if (isActive) listenOnce();
+        else setState("", "Tap to start");
+      };
+      utterance.onerror = () => {
+        if (isActive) listenOnce();
+      };
+      speechSynthesis.speak(utterance);
+    }
+
+    function startConversation() {
+      if (!SpeechRecognitionAPI) {
+        setState("error", "Speech recognition isn't supported in this browser — try Chrome or Edge.");
+        return;
+      }
+      chatHistory = [];
+      isActive = true;
+      listenOnce();
+    }
+
+    function stopConversation() {
       isActive = false;
+      if (recognition) {
+        try { recognition.abort(); } catch (err) {}
+      }
+      speechSynthesis.cancel();
       setState("", "Tap to start");
     }
 
